@@ -1,14 +1,14 @@
 stages:
 - stage: Test
   jobs:
-  - job: ModuleTest
+  - job: Testing
     pool: 
       name: 'vdc-self-hosted'
     steps:
     - task: PowerShell@2
-      displayName: "Pester Tests for All Modules"
+      displayName: "Runs all Pester Tests"
       inputs:
-        filePath: 'orchestration/Tests/UnitTests/AllModules.Tests.ps1'
+        filePath: 'orchestration/Tests/UnitTests/All.Tests.ps1'
         pwsh: true
     - task: PublishTestResults@2
       inputs:
