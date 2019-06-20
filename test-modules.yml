@@ -8,11 +8,5 @@ stages:
     - task: PowerShell@2
       displayName: "Pester Tests for All Modules"
       inputs:
-        targetType: 'inline'
-        script: '# Write your powershell commands here.
-          $rootPath = Resolve-Path ".\";
-          $resultsFile = Join-Path $rootPath "Test-Pester.XML";
-          Get-ChildItem -Path "module.tests.ps1" -Recurse | Select FullName | ForEach-Object { Invoke-Pester -Script $_.FullName -OutputFile $resultsFile };
-          
-          # Use the environment variables input below to pass secret variables to this script.'
+        filePath: 'orchestration/Tests/UnitTests/AllModules.Tests.ps1'
         pwsh: true
