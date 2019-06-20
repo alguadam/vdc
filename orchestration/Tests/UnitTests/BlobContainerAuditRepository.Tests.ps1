@@ -6,8 +6,17 @@
 ##          The script will import the BlobContainerAuditRepository Module and any dependency moduels to perform the tests.
 ##
 ########################################################################################################################
-. ../../RepositoryService/Interface/IAuditRepository.ps1;
-. ../../RepositoryService/Implementations/BlobContainerAuditRepository.ps1;
+$rootPath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+$scriptPath = Join-Path $rootPath -ChildPath '..' -AdditionalChildPath  @("..", "RepositoryService", "Interface", "IAuditRepository.ps1");
+$scriptBlock = ". $scriptPath";
+$script = [scriptblock]::Create($scriptBlock);
+. $script;
+
+$rootPath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+$scriptPath = Join-Path $rootPath -ChildPath '..' -AdditionalChildPath  @("..", "RepositoryService", "Implementations", "BlobContainerAuditRepository.ps1");
+$scriptBlock = ". $scriptPath";
+$script = [scriptblock]::Create($scriptBlock);
+. $script;
 
 Describe  "Blob Container Audit Repository Unit Test Cases" {
 
@@ -39,7 +48,8 @@ Describe  "Blob Container Audit Repository Unit Test Cases" {
         It "Should invoke the Get-AzStorageBlobContent for GetAuditTrailById" {
             $archetypeInstanceName = "contoso-shared-services"
             $auditId = "f02bf00b-2bc7-4ad0-91b2-8d43df923907"
-            $blobContainerAuditRepository.GetAuditTrailById($archetypeInstanceName, $auditId);
+            $filters = @($archetypeInstanceName, $auditId);
+            $blobContainerAuditRepository.GetAuditTrailByFilters($filters);
             Assert-MockCalled Get-AzStorageblobcontent -Times 1 -Exactly;
         }
     }
