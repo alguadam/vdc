@@ -10,8 +10,9 @@ stages:
       inputs:
         targetType: 'inline'
         script: '# Write your powershell commands here.
-          
-          Get-ChildItem -Path "module.tests.ps1" -Recurse | Select FullName | ForEach-Object { Invoke-Pester -Script $_.FullName };
+          $rootPath = Resolve-Path ".\";
+          $resultsFile = Join-Path $rootPath "Test-Pester.XML";
+          Get-ChildItem -Path "module.tests.ps1" -Recurse | Select FullName | ForEach-Object { Invoke-Pester -Script $_.FullName -OutputFile $resultsFile };
           
           # Use the environment variables input below to pass secret variables to this script.'
         pwsh: true
