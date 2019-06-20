@@ -81,3 +81,9 @@ TestResults.xml
 */Test-Pester.xml
 Test-Pester.xml
 **/*.xml
+audit
+audit/**
+mappings/**
+mappings
+deployments/**
+deployments
