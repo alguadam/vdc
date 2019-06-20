@@ -79,7 +79,7 @@ $scriptBlock = ". $modulePath";
 $script = [scriptblock]::Create($scriptBlock);
 . $script;
 
-$modulePath = Join-Path (Join-Path (Join-Path $rootPath -ChildPath '..') -ChildPath 'OrchestrationService') -ChildPath 'ArchetypeInstanceBuilder.ps1'
+$modulePath = Join-Path (Join-Path (Join-Path $rootPath -ChildPath '..') -ChildPath 'OrchestrationService') -ChildPath 'ConfigurationBuilder.ps1'
 $scriptBlock = ". $modulePath";
 $script = [scriptblock]::Create($scriptBlock);
 . $script;

@@ -30,7 +30,7 @@ $deploymentService = $null;
 $cacheDataService = $null;
 $auditDataService = $null;
 $moduleStateDataService = $null;
-$archetypeInstanceBuilder = $null;
+$configurationBuilder = $null;
 $factory = $null;
 $defaultLocation = "West US";
 $notSupportedVersion = 1.9;
@@ -38,6 +38,7 @@ $defaultSupportedVersion = 2.0;
 $defaultModuleConfigurationsFolderName = "modules";
 $defaultTemplateFileName = "deploy.json";
 $defaultParametersFileName = "parameters.json";
+$toolkitConfigurationFileName = "toolkit.config.json";
         
 Function New-Deployment {
     [CmdletBinding()]
@@ -109,33 +110,33 @@ Function New-Deployment {
             Write-Debug "Local deployment, attempting to resolve root path";
             # If no explicity working directory is passed and the script
             # is run locally, then use the current path
-            $defaultWorkingDirectory = Resolve-Path ".\";
+            $defaultWorkingDirectory = (Resolve-Path ".\").Path;
         }
 
         Write-Debug "Working directory is: $defaultWorkingDirectory";
 
-        $archetypeInstanceJson = `
-            Get-ArchetypeInstance `
-                -ArchetypeDefinitionPath $ArchetypeDefinitionPath `
+        # Build toolkit configuration from file
+        $toolkitConfigurationJson = `
+            Build-ConfigurationUsingFile `
+                -FilePath $toolkitConfigurationFileName `
                 -WorkingDirectory $defaultWorkingDirectory;
 
-        # Retrieve the Archetype instance name if not already passed
-        # to this function
-        $ArchetypeInstanceName = `
-            Get-ArchetypeInstanceName `
-                -ArchetypeInstance $archetypeInstanceJson `
-                -ArchetypeInstanceName $ArchetypeInstanceName;
+        # Getting cache information from toolkit configuration
+        $cacheStorageInformation = `
+            Get-CacheStorageInformation `
+                -ToolkitConfigurationJson $toolkitConfigurationJson;
 
-        # Getting audit information from 
+        # Getting audit information from toolkit configuration
         $auditStorageInformation = `
             Get-AuditStorageInformation `
-                -ArchetypeInstanceJson $archetypeInstanceJson;
+                -ToolkitConfigurationJson $toolkitConfigurationJson;
         
         Write-Debug "Audit storage information is: $(ConvertTo-Json $auditStorageInformation -Depth 100)";
         
         $factory = `
             Invoke-Bootstrap `
-                -AuditStorageInformation $auditStorageInformation;
+                -AuditStorageInformation $auditStorageInformation `
+                -CacheStorageInformation $cacheStorageInformation;
         
         $deploymentService = `
             $factory.GetInstance('IDeploymentService');
@@ -149,8 +150,23 @@ Function New-Deployment {
         $moduleStateDataService = `
             $factory.GetInstance('IModuleStateDataService');
 
-        $archetypeInstanceBuilder = `
-            $factory.GetInstance('ArchetypeInstanceBuilder');
+        $configurationBuilder = `
+            $factory.GetInstance('ConfigurationBuilder');
+        
+        # Contruct the archetype instance object only if it is not already
+        # cached
+        $archetypeInstanceJson = `
+            Build-ConfigurationUsingFile `
+                -FilePath $ArchetypeDefinitionPath `
+                -WorkingDirectory $defaultWorkingDirectory `
+                -CacheKey $ArchetypeInstanceName;
+                
+        # Retrieve the Archetype instance name if not already passed
+        # to this function
+        $ArchetypeInstanceName = `
+            Get-ArchetypeInstanceName `
+                -ArchetypeInstance $archetypeInstanceJson `
+                -ArchetypeInstanceName $ArchetypeInstanceName;
 
         $moduleConfiguration = `
             Get-ModuleConfiguration `
@@ -435,60 +451,68 @@ Function Set-SubscriptionContext {
     }
     
 }
-Function Get-ArchetypeInstance {
+Function Build-ConfigurationUsingFile {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
         [string]
-        $ArchetypeDefinitionPath,
+        $FilePath,
         [Parameter(Mandatory=$true)]
         [string]
-        $WorkingDirectory
+        $WorkingDirectory,
+        [Parameter(Mandatory=$false)]
+        [string]
+        $CacheKey
     )
 
     try {
         # First, retrieve the value from the cache
         # If a value exists, it is going to be a
         # hashtable in this case.
-        $archetypeInstance = $null;
-        #    $cacheDataService.GetByKey($ArchetypeInstanceName);
-        Write-Debug "Archetype instance found: $($null -ne $archetypeInstance)";
+        $configurationInstance = $null;
+
+        if(![string]::IsNullOrEmpty($CacheKey)) {
+            $configurationInstance = $cacheDataService.GetByKey($CacheKey);
+        }
+        Write-Debug "Configuration instance found: $($null -ne $configurationInstance)";
         
-        if($null -eq $archetypeInstance) {
-            Write-Debug "No archetype instance found in the cache, generating one";
+        if($null -eq $configurationInstance) {
+            Write-Debug "No configuration instance found in the cache, generating one";
             
             # Let's get the absolute path, if an absolute path is passed
-            # as part of ArchetypeDefinitionPath, then this function
+            # as part of FilePath, then this function
             # returns the value as is.
-            $ArchetypeDefinitionPath = `
+            $FilePath = `
                 ConvertTo-AbsolutePath `
-                    -Path $ArchetypeDefinitionPath `
+                    -Path $FilePath `
                     -RootPath $WorkingDirectory;
             
-            Write-Debug "Archetype definition path: $ArchetypeDefinitionPath";
+            Write-Debug "File path: $FilePath";
 
-            $archetypeInstanceBuilder = [ArchetypeInstanceBuilder]::new(
+            $configurationBuilder = [ConfigurationBuilder]::new(
                 $null,
-                $ArchetypeDefinitionPath
+                $FilePath
             );
             
             # Generate archetype Instance from archetype 
             # definition
-            $archetypeInstance = `
-                $archetypeInstanceBuilder.BuildArchetypeInstance();
-            Write-Debug "Archetype instance: $(ConvertTo-Json $archetypeInstance -Depth 100)"
-            # TODO: We should cache this value
-            # Let's cache the archetype instance
-            # $cacheDataService.SetByKey(
-            #    $ArchetypeInstanceName,
-            #    $archetypeInstance);
+            $configurationInstance = `
+                $configurationBuilder.BuildConfigurationInstance();
+            Write-Debug "Configuration instance: $(ConvertTo-Json $configurationInstance -Depth 100)"
 
-            #Write-Debug "Archetype instance properly cached, using key: $ArchetypeInstanceName";
+            if(![string]::IsNullOrEmpty($CacheKey)) {
+                # Let's cache the archetype instance
+                $cacheDataService.SetByKey(
+                    $CacheKey,
+                    $configurationInstance);
+            }
+
+            Write-Debug "Configuration instance properly cached, using key: $ArchetypeInstanceName";
         }
-        return $archetypeInstance;
+        return $configurationInstance;
     }
     catch {
-        Write-Host "An error ocurred while running Get-ArchetypeInstance";
+        Write-Host "An error ocurred while running Build-ConfigurationUsingFile";
         Write-Host $_;
         throw $_;
     }
@@ -499,7 +523,10 @@ Function Invoke-Bootstrap {
     param (
         [Parameter(Mandatory=$true)]
         [hashtable]
-        $AuditStorageInformation
+        $AuditStorageInformation,
+        [Parameter(Mandatory=$true)]
+        [hashtable]
+        $CacheStorageInformation
     )
 
     try {
@@ -522,7 +549,7 @@ Function Invoke-Bootstrap {
                     -AuditStorageType $AuditStorageInformation.StorageType `
                     -AuditStorageAccountName $bootstrapResults.StorageAccountName `
                     -AuditStorageAccountSasToken $bootstrapResults.StorageAccountSasToken `
-                    -CacheStorageType $archetypeInstanceJson.ToolkitComponents.Cache.StorageType;
+                    -CacheStorageType $CacheStorageInformation.StorageType;
             
             Write-Debug "Bootstrap type: storage account, result is: $(ConvertTo-Json $bootstrapResults -Depth 100)";
         }
@@ -534,7 +561,7 @@ Function Invoke-Bootstrap {
             $factory = `
                 New-FactoryInstance `
                     -AuditStorageType $AuditStorageInformation.StorageType `
-                    -CacheStorageType $archetypeInstanceJson.ToolkitComponents.Cache.StorageType;
+                    -CacheStorageType $CacheStorageInformation.StorageType;
             
             Write-Debug "Bootstrap type: local storage, result is: $(ConvertTo-Json $bootstrapResults -Depth 100)";
         }
@@ -628,12 +655,51 @@ Function Get-SubscriptionInformation {
     }
 }
 
+Function Get-CacheStorageInformation {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [hashtable] 
+        $ToolkitConfigurationJson
+    )
+
+    try {
+        $cacheStorageInformation = @{
+            StorageType = ''
+        };
+
+        if ($ToolkitConfigurationJson.Configuration.Cache -and
+        $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "azuredevops"){
+            
+            # Let's get the Storage Type information
+            $cacheStorageInformation.StorageType = 'azuredevops';
+        }
+        # Let's get audit local storage information
+        elseif ($ToolkitConfigurationJson.Configuration.Cache -and
+                $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "local") {
+            
+            $cacheStorageInformation.StorageType = 'local';
+            
+        }
+        # Not supported error
+        else {
+            throw "Configuration.Cache object not present or Cache.StorageType not supported, currently supported types are: AzureDevOps and Local";
+        }
+        return $cacheStorageInformation;
+    }
+    catch {
+        Write-Host "An error ocurred while running Get-CacheStorageInformation";
+        Write-Host $_;
+        throw $_;
+    }
+}
+
 Function Get-AuditStorageInformation {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [hashtable] 
-        $ArchetypeInstanceJson
+        $ToolkitConfigurationJson
     )
     try {
         $auditStorageInformation = @{
@@ -646,22 +712,22 @@ Function Get-AuditStorageInformation {
             LocalPath = ''
         };
 
-        if ($ArchetypeInstanceJson.ToolkitComponents.Audit -and
-        $ArchetypeInstanceJson.ToolkitComponents.Audit.StorageType.ToLower() -eq "storageaccount"){
+        if ($ToolkitConfigurationJson.Configuration.Audit -and
+        $ToolkitConfigurationJson.Configuration.Audit.StorageType.ToLower() -eq "storageaccount"){
             
             # Let's get the Storage Account information, this information will be used
             # when provisioning an Audit Storage Account.
             $auditStorageInformation.StorageType = 'storageaccount';
             $auditStorageInformation.TenantId = `
-                $ArchetypeInstanceJson.Subscriptions.Toolkit.TenantId;
+                $ToolkitConfigurationJson.Subscription.TenantId;
             $auditStorageInformation.SubscriptionId = `
-                $ArchetypeInstanceJson.Subscriptions.Toolkit.SubscriptionId;
+                $ToolkitConfigurationJson.Subscription.SubscriptionId;
             $auditStorageInformation.ResourceGroup = `
-                $ArchetypeInstanceJson.ToolkitComponents.Audit.ResourceGroup;
+                $ToolkitConfigurationJson.Configuration.Audit.ResourceGroup;
             $auditStorageInformation.Location = `
-                $ArchetypeInstanceJson.Subscriptions.Toolkit.Location;
+                $ToolkitConfigurationJson.Subscription.Location;
             $auditStorageInformation.StorageAccountName = `
-                $ArchetypeInstanceJson.ToolkitComponents.Audit.StorageAccountName;
+                $ToolkitConfigurationJson.Configuration.Audit.StorageAccountName;
             
             # Let's check for invariant information.
             if ([string]::IsNullOrEmpty($auditStorageInformation.TenantId) -or 
@@ -672,18 +738,18 @@ Function Get-AuditStorageInformation {
                 }
         }
         # Let's get audit local storage information
-        elseif ($ArchetypeInstanceJson.ToolkitComponents.Audit -and
-                $ArchetypeInstanceJson.ToolkitComponents.Audit.StorageType.ToLower() -eq "local") {
+        elseif ($ToolkitConfigurationJson.Configuration.Audit -and
+                $ToolkitConfigurationJson.Configuration.Audit.StorageType.ToLower() -eq "local") {
             
             $auditStorageInformation.StorageType = 'local';
             # This path is optional, you can provide a specific path where all the audit information will get
             # saved.
             $auditStorageInformation.LocalPath = `
-                $ArchetypeInstanceJson.ToolkitComponents.Audit.LocalPath;
+                $ToolkitConfigurationJson.Configuration.Audit.LocalPath;
         }
         # Not supported error
         else {
-            throw "ToolkitComponents.Audit object not present or Audit.StorageType not supported, currently supported types are: StorageAccount and Local";
+            throw "Configuration.Audit object not present or Audit.StorageType not supported, currently supported types are: StorageAccount and Local";
         }
         return $auditStorageInformation;
     }
