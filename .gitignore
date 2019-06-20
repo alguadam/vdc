@@ -76,3 +76,8 @@ src/build
 *.pubxml
 archetypes/aks/archetypes.json
 archetypes/shared-services/archetype.test.devops.json
+*/TestResults.xml
+TestResults.xml
+*/Test-Pester.xml
+Test-Pester.xml
+*.xml
