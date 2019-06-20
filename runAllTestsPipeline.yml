@@ -8,7 +8,7 @@ stages:
     - task: PowerShell@2
       displayName: "Runs all Pester Tests"
       inputs:
-        filePath: 'orchestration/Tests/UnitTests/All.Tests.ps1'
+        filePath: 'orchestration/Tests/UnitTests/RunAll.ps1'
         pwsh: true
     - task: PublishTestResults@2
       inputs:
