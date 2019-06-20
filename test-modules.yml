@@ -10,3 +10,7 @@ stages:
       inputs:
         filePath: 'orchestration/Tests/UnitTests/AllModules.Tests.ps1'
         pwsh: true
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'NUnit'
+        testResultsFiles: '**/Test-Pester.XML'
