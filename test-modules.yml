@@ -1,9 +1,3 @@
-# VDC Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-# Set variables once
-
 stages:
 - stage: Test
   jobs:
@@ -15,7 +9,9 @@ stages:
       displayName: "Pester Tests for All Modules"
       inputs:
         targetType: 'inline'
-        script: '
-          # Get all module.tests.ps1 files and run Pester tests
-          Get-ChildItem -Path "module.tests.ps1" -Recurse | Select FullName | ForEach-Object { Invoke-Pester -Script $_.FullName };'
+        script: '# Write your powershell commands here.
+          
+          Get-ChildItem -Path "module.tests.ps1" -Recurse | Select FullName | ForEach-Object { Invoke-Pester -Script $_.FullName };
+          
+          # Use the environment variables input below to pass secret variables to this script.'
         pwsh: true
