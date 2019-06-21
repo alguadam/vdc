@@ -7,7 +7,7 @@ Class CacheDataService: ICacheDataService {
         $this.cacheRepository = $cacheRepository;
     }
         
-    [void] SetByKey([string] $key, [object] $value) {
+    [void] SetByKey([string] $key, [object] $value, [bool] $isSecret = $false) {
         
         # converting the object to string
         $valueType = $value.GetType().ToString();
@@ -30,7 +30,8 @@ Class CacheDataService: ICacheDataService {
         # call repository to store the cache
         $this.cacheRepository.Set(
             $key, 
-            $cacheValue);
+            $cacheValue,
+            $isSecret);
     }
 
     [object] GetByKey([string] $key) {

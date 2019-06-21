@@ -36,12 +36,19 @@ Class AzureDevOpsCacheRepository: ICacheRepository {
                     $this.cacheNamePrefix, `
                     $key).ToUpper();
 
-        # Check the environemnt variable for the key
+        # Check the environment variable for the key
         # An invalid key throws an exception, so we 
         # set ErrorAction to SilentlyContinue
         $environmentValue = `
             (Get-Item Env:$key `
                 -ErrorAction SilentlyContinue);
+
+        # If the key is not found in environment variable
+        # then use $(environmentKey) to retrieve the value.
+        # This is specific for secrets.
+        if($null -eq $environmentValue) {
+            $environmentValue = $($key);
+        }
 
         # return type from Get-Item is name-value pair, if present
         # return its Value
@@ -54,7 +61,8 @@ Class AzureDevOpsCacheRepository: ICacheRepository {
     }
 
     [void] Set([string] $key, `
-               [string] $value) {
+               [string] $value, `
+               [bool] $isSecret = $false) {
         
         # perform a set operation only when a key 
         # exists.
@@ -86,7 +94,11 @@ Class AzureDevOpsCacheRepository: ICacheRepository {
                (![string]::IsNullOrEmpty($environmentValue) `
                 -and $environmentValue -ne $value
                )) {
-                Write-Host "##vso[task.setvariable variable=$key;]$value";
+                $setVariable = "##vso[task.setvariable variable=$key;";
+                # Set as secret or as normal pipeline variable
+                $setVariable += @{ "True" = "isSecret=true"; "False" = ""}[$isSecret.ToString()];
+                $setVariable += "]$value";
+                Write-Host $setVariable;
             }
         }
     }

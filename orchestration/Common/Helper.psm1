@@ -205,9 +205,19 @@ Function Get-PowershellEnvironmentVariable {
         # Dictionaries, therefore we need to call
         # .Value to get the proper value, otherwise
         # we'll get a Dictionary object.
-        return `
+
+        $environmentValue = `
             (Get-Item Env:$Key `
                 -ErrorAction SilentlyContinue).Value;
+        
+        # Try reading the secrets if the kye is not found in 
+        # ths environment variables
+        if($null -eq $environmentValue) {
+            $environmentValue = $($Key);
+        }
+
+        return $environmentValue;
+            
     }
     catch {
         Write-Host "An error ocurred while running Get-PowershellEnvironmentVariable";
