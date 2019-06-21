@@ -1,5 +1,5 @@
 $rootPath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
-$helperPath = Join-Path (Join-Path (Join-Path $rootPath -ChildPath '..') -ChildPath 'Common') -ChildPath 'Helper.psm1';
+$helperPath = Join-Path $rootPath -ChildPath '..' -AdditionalChildPath @('Common', 'Helper.psm1');
 Import-Module $helperPath;
 
 Class ConfigurationBuilder {
@@ -25,7 +25,7 @@ Class ConfigurationBuilder {
             $this.configurationDefinitionFileName = (Get-Item $configurationDefinitionPath).Name;
         }   
         else {
-            throw "ConfigurationDefinitionPath value is invalid";
+            throw "ConfigurationDefinitionPath - $configurationDefinitionPath is invalid";
         }
     }
 

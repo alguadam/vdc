@@ -115,28 +115,7 @@ Function New-Deployment {
 
         Write-Debug "Working directory is: $defaultWorkingDirectory";
 
-        # Build toolkit configuration from file
-        $toolkitConfigurationJson = `
-            Build-ConfigurationUsingFile `
-                -FilePath $toolkitConfigurationFileName `
-                -WorkingDirectory $defaultWorkingDirectory;
-
-        # Getting cache information from toolkit configuration
-        $cacheStorageInformation = `
-            Get-CacheStorageInformation `
-                -ToolkitConfigurationJson $toolkitConfigurationJson;
-
-        # Getting audit information from toolkit configuration
-        $auditStorageInformation = `
-            Get-AuditStorageInformation `
-                -ToolkitConfigurationJson $toolkitConfigurationJson;
-        
-        Write-Debug "Audit storage information is: $(ConvertTo-Json $auditStorageInformation -Depth 100)";
-        
-        $factory = `
-            Invoke-Bootstrap `
-                -AuditStorageInformation $auditStorageInformation `
-                -CacheStorageInformation $cacheStorageInformation;
+        $factory = Invoke-Bootstrap;
         
         $deploymentService = `
             $factory.GetInstance('IDeploymentService');
@@ -520,48 +499,61 @@ Function Build-ConfigurationUsingFile {
 
 Function Invoke-Bootstrap {
     [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $AuditStorageInformation,
-        [Parameter(Mandatory=$true)]
-        [hashtable]
-        $CacheStorageInformation
-    )
+    param ()
 
     try {
+        # Build toolkit configuration from file
+        $toolkitConfigurationJson = `
+            Build-ConfigurationUsingFile `
+                -FilePath $toolkitConfigurationFileName `
+                -WorkingDirectory $defaultWorkingDirectory;
+
+        # Getting cache information from toolkit configuration
+        $cacheStorageInformation = `
+            Get-CacheStorageInformation `
+                -ToolkitConfigurationJson $toolkitConfigurationJson;
+
+        Write-Debug "Cache storage information is: $(ConvertTo-Json $cacheStorageInformation -Depth 100)";
+
+        # Getting audit information from toolkit configuration
+        $auditStorageInformation = `
+            Get-AuditStorageInformation `
+                -ToolkitConfigurationJson $toolkitConfigurationJson;
+
+        Write-Debug "Audit storage information is: $(ConvertTo-Json $auditStorageInformation -Depth 100)";
+
         # Let's create a new instance of Bootstrap
         $bootstrap = [Initialize]::new();
                 
         # Let's initialize the appropriate storage type
-        if ($AuditStorageInformation.StorageType.ToLower() `
+        if ($auditStorageInformation.StorageType.ToLower() `
             -eq "storageaccount") {
             $bootstrapResults = `
                 $bootstrap.InitializeStorageAccountStore(
-                    $AuditStorageInformation.TenantId,
-                    $AuditStorageInformation.SubscriptionId,
-                    $AuditStorageInformation.ResourceGroup,
-                    $AuditStorageInformation.Location,
-                    $AuditStorageInformation.StorageAccountName);
+                    $auditStorageInformation.TenantId,
+                    $auditStorageInformation.SubscriptionId,
+                    $auditStorageInformation.ResourceGroup,
+                    $auditStorageInformation.Location,
+                    $auditStorageInformation.StorageAccountName);
 
             $factory = `
                 New-FactoryInstance `
-                    -AuditStorageType $AuditStorageInformation.StorageType `
+                    -AuditStorageType $auditStorageInformation.StorageType `
                     -AuditStorageAccountName $bootstrapResults.StorageAccountName `
                     -AuditStorageAccountSasToken $bootstrapResults.StorageAccountSasToken `
-                    -CacheStorageType $CacheStorageInformation.StorageType;
+                    -CacheStorageType $cacheStorageInformation.StorageType;
             
             Write-Debug "Bootstrap type: storage account, result is: $(ConvertTo-Json $bootstrapResults -Depth 100)";
         }
-        elseif ($AuditStorageInformation.StorageType.ToLower() `
+        elseif ($auditStorageInformation.StorageType.ToLower() `
                 -eq "local") {
             $bootstrapResults = `
                 $bootstrap.InitializeLocalStore();
 
             $factory = `
                 New-FactoryInstance `
-                    -AuditStorageType $AuditStorageInformation.StorageType `
-                    -CacheStorageType $CacheStorageInformation.StorageType;
+                    -AuditStorageType $auditStorageInformation.StorageType `
+                    -CacheStorageType $cacheStorageInformation.StorageType;
             
             Write-Debug "Bootstrap type: local storage, result is: $(ConvertTo-Json $bootstrapResults -Depth 100)";
         }
@@ -669,17 +661,17 @@ Function Get-CacheStorageInformation {
         };
 
         if ($ToolkitConfigurationJson.Configuration.Cache -and
-        $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "azuredevops"){
+            $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "azuredevops") {
             
             # Let's get the Storage Type information
             $cacheStorageInformation.StorageType = 'azuredevops';
         }
         # Let's get audit local storage information
-        elseif ($ToolkitConfigurationJson.Configuration.Cache -and
-                $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "local") {
-            
+        elseif(($ToolkitConfigurationJson.Configuration.Cache -and
+            $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "local") -or
+            $null -eq $ToolkitConfigurationJson.Configuration.Cache -or
+            $null -eq $ToolkitConfigurationJson.Configuration.Cache.StorageType) {
             $cacheStorageInformation.StorageType = 'local';
-            
         }
         # Not supported error
         else {
