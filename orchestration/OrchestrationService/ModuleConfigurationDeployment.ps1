@@ -1555,14 +1555,17 @@ Function Add-ItemToCache {
         $Key,
         [Parameter(Mandatory=$true)]
         [object]
-        $Value
+        $Value,
+        [Parameter(Mandatory=$false)]
+        [switch]
+        $Secret
     )
 
     try {
         $cacheDataService.SetByKey(
             $Key,
             $Value,
-            $false); 
+            $Secret.IsPresent); 
     }
     catch {
         Write-Host "An error ocurred while running Add-ItemToCache";
@@ -2094,11 +2097,11 @@ Function Get-OutputFromStateStore() {
             $parameterValue = $allOutputs.$parameterName.Value;
             Write-Debug "Cache Key: $($moduleConfigurationName.$parameterName)";
             Write-Debug "Cache Value is: $parameterValue";
+            
             # Cache the retrieved value by calling set method on cache data service with key and value
-            $cacheDataService.SetByKey(
-                "$moduleConfigurationName.$parameterName",
-                $parameterValue,
-                $false);
+            Add-ItemToCache `
+                -Key "$moduleConfigurationName.$parameterName", `
+                -Value $parameterValue;
         }
 
         # Find the specific output 
