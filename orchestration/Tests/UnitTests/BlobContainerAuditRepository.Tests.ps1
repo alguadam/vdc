@@ -24,6 +24,7 @@ Describe  "Blob Container Audit Repository Unit Test Cases" {
         BeforeEach {
             $storageAccountName = "vdcstorageaccount";
             $storageAccountSasToken= "?fj8mjfdojg89j4k3489tndhwd8n4398nf";
+            $blobContent = ConvertTo-Json (@{ foo = "bar"});
             Mock New-AzStorageContext {
                 return (New-MockObject -Type Microsoft.WindowsAzure.Commands.Storage.AzureStorageContext)
             }
@@ -31,10 +32,16 @@ Describe  "Blob Container Audit Repository Unit Test Cases" {
                 return (Test-Path -Path $File);
             }
             Mock Get-AzStorageblobcontent {
-                return "demo-file";
+                return $blobContent;
             }
+            Mock Get-Content {
+                return $blobContent;
+            }
+
             $blobContainerAuditRepository = `
-                New-Object BlobContainerAuditRepository($storageAccountName, $storageAccountSasToken);
+                New-Object BlobContainerAuditRepository(
+                    $storageAccountName, 
+                    $storageAccountSasToken);
         }
         It "Should invoke the Set-AzStorageblobcontent for SaveResourceState" {
             $entity = [PSCustomObject]@{

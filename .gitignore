@@ -9,7 +9,7 @@ __pycache__/
 .cache
 
 # Virtual environment
-env*/
+venv*/
 
 # PTVS analysis
 .ptvs/
