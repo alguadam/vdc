@@ -740,10 +740,18 @@ Function Get-AuditStorageInformation {
                 $null -ne $ToolkitConfigurationJson.Configuration.Audit.StorageType) {
             
             $auditStorageInformation.StorageType = 'local';
-            # This path is optional, you can provide a specific path where all the audit information will get
-            # saved.
-            $auditStorageInformation.LocalPath = `
-                $ToolkitConfigurationJson.Configuration.Audit.LocalPath;
+            if($null -ne $ToolkitConfigurationJson.Configuration.Audit.LocalPath) {
+                # This path is optional, you can provide a specific path where all the audit information will get
+                # saved.
+                $auditStorageInformation.LocalPath = `
+                    $ToolkitConfigurationJson.Configuration.Audit.LocalPath;
+            }
+            else {
+                # This path is optional, you can provide a specific path where all the audit information will get
+                # saved.
+                $auditStorageInformation.LocalPath = `
+                    $defaultWorkingDirectory;
+            }
         }
         # Not supported error
         else {
