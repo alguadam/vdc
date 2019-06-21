@@ -38,7 +38,7 @@ $defaultSupportedVersion = 2.0;
 $defaultModuleConfigurationsFolderName = "modules";
 $defaultTemplateFileName = "deploy.json";
 $defaultParametersFileName = "parameters.json";
-$toolkitConfigurationFileName = "toolkit.config.json";
+
         
 Function New-Deployment {
     [CmdletBinding()]
@@ -135,7 +135,7 @@ Function New-Deployment {
         # Contruct the archetype instance object only if it is not already
         # cached
         $archetypeInstanceJson = `
-            Build-ConfigurationUsingFile `
+            Build-ConfigurationInstance `
                 -FilePath $ArchetypeDefinitionPath `
                 -WorkingDirectory $defaultWorkingDirectory `
                 -CacheKey $ArchetypeInstanceName;
@@ -430,7 +430,7 @@ Function Set-SubscriptionContext {
     }
     
 }
-Function Build-ConfigurationUsingFile {
+Function Build-ConfigurationInstance {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -491,7 +491,7 @@ Function Build-ConfigurationUsingFile {
         return $configurationInstance;
     }
     catch {
-        Write-Host "An error ocurred while running Build-ConfigurationUsingFile";
+        Write-Host "An error ocurred while running Build-ConfigurationInstance";
         Write-Host $_;
         throw $_;
     }
@@ -501,10 +501,12 @@ Function Invoke-Bootstrap {
     [CmdletBinding()]
     param ()
 
+    $toolkitConfigurationFileName = "toolkit.config.json";
+
     try {
         # Build toolkit configuration from file
         $toolkitConfigurationJson = `
-            Build-ConfigurationUsingFile `
+            Build-ConfigurationInstance `
                 -FilePath $toolkitConfigurationFileName `
                 -WorkingDirectory $defaultWorkingDirectory;
 
@@ -669,6 +671,7 @@ Function Get-CacheStorageInformation {
         # Let's get audit local storage information
         elseif(($ToolkitConfigurationJson.Configuration.Cache -and
             $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "local") -or
+            $null -eq $ToolkitConfigurationJson.Configuration -or
             $null -eq $ToolkitConfigurationJson.Configuration.Cache -or
             $null -eq $ToolkitConfigurationJson.Configuration.Cache.StorageType) {
             $cacheStorageInformation.StorageType = 'local';
@@ -730,8 +733,11 @@ Function Get-AuditStorageInformation {
                 }
         }
         # Let's get audit local storage information
-        elseif ($ToolkitConfigurationJson.Configuration.Audit -and
-                $ToolkitConfigurationJson.Configuration.Audit.StorageType.ToLower() -eq "local") {
+        elseif (($ToolkitConfigurationJson.Configuration.Audit -and
+                $ToolkitConfigurationJson.Configuration.Audit.StorageType.ToLower() -eq "local") -or
+                $null -ne $ToolkitConfigurationJson.Configuration -or 
+                $null -ne $ToolkitConfigurationJson.Configuration.Audit -or 
+                $null -ne $ToolkitConfigurationJson.Configuration.Audit.StorageType) {
             
             $auditStorageInformation.StorageType = 'local';
             # This path is optional, you can provide a specific path where all the audit information will get
