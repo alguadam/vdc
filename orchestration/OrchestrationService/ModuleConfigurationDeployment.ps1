@@ -671,6 +671,7 @@ Function Get-CacheStorageInformation {
         # Let's get audit local storage information
         elseif(($ToolkitConfigurationJson.Configuration.Cache -and
             $ToolkitConfigurationJson.Configuration.Cache.StorageType.ToLower() -eq "local") -or
+            $null -ne $ToolkitConfigurationJson -or 
             $null -eq $ToolkitConfigurationJson.Configuration -or
             $null -eq $ToolkitConfigurationJson.Configuration.Cache -or
             $null -eq $ToolkitConfigurationJson.Configuration.Cache.StorageType) {
@@ -735,6 +736,7 @@ Function Get-AuditStorageInformation {
         # Let's get audit local storage information
         elseif (($ToolkitConfigurationJson.Configuration.Audit -and
                 $ToolkitConfigurationJson.Configuration.Audit.StorageType.ToLower() -eq "local") -or
+                $null -ne $ToolkitConfigurationJson -or 
                 $null -ne $ToolkitConfigurationJson.Configuration -or 
                 $null -ne $ToolkitConfigurationJson.Configuration.Audit -or 
                 $null -ne $ToolkitConfigurationJson.Configuration.Audit.StorageType) {
