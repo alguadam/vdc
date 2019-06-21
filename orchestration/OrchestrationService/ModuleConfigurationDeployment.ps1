@@ -1561,7 +1561,8 @@ Function Add-ItemToCache {
     try {
         $cacheDataService.SetByKey(
             $Key,
-            $Value); 
+            $Value,
+            $false); 
     }
     catch {
         Write-Host "An error ocurred while running Add-ItemToCache";
@@ -2096,7 +2097,8 @@ Function Get-OutputFromStateStore() {
             # Cache the retrieved value by calling set method on cache data service with key and value
             $cacheDataService.SetByKey(
                 "$moduleConfigurationName.$parameterName",
-                $parameterValue);
+                $parameterValue,
+                $false);
         }
 
         # Find the specific output 

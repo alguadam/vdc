@@ -469,6 +469,6 @@ Function Build-ArchetypeInstance() {
     $archetypeInstance = $archetypeInstanceBuilder.BuildArchetypeInstance();
 
     # Cache the retrieved object
-    $cacheDataService.SetByKey($ArchetypeInstanceName, $archetypeInstance);
+    $cacheDataService.SetByKey($ArchetypeInstanceName, $archetypeInstance, $false);
 
 }
